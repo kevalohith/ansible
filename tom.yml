@@ -1,0 +1,11 @@
+---
+
+# configuring tomcat
+
+- name: "Install Apache Tomcat"
+  hosts: all
+  become: true
+
+  roles:
+    - tomrole
+    

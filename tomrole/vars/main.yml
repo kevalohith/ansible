@@ -1,0 +1,3 @@
+---
+tomcat_admin_password: "123admin456"
+# vars file for tomcat

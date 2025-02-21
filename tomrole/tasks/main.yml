@@ -1,0 +1,81 @@
+---
+# tasks file for tomrole
+- name: "Installing Java"
+  apt:
+    name: openjdk-17-jdk
+    update_cache: yes
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: "Addling tomcat group"
+  group: 
+    name: "{{ tomcat_group }}"
+    state: present
+
+- name: "adding user tomcat"
+  user:
+    name: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+    home: "{{ install_dir }}"
+    shell: /bin/false
+
+- name: "Downloading Tomcat"
+  get_url:
+    url: "https://archive.apache.org/dist/tomcat/tomcat-10/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
+    dest: "/tmp/apache-tomcat-{{ tomcat_version }}.tar.gz"
+    mode: '0644'
+
+- name: "create tomcat directory"
+  file:
+    path: "{{ install_dir }}"
+    state: directory
+    owner: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+    mode: "0755"
+
+- name: "extract tomcat"
+  unarchive:
+    src: "/tmp/apache-tomcat-{{ tomcat_version }}.tar.gz"
+    dest: "{{ install_dir }}"
+    remote_src: yes
+    extra_opts: [--strip-components=1]
+
+- name: "permission for tomcat directory"
+  file:
+    path: "{{ install_dir }}"
+    owner: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+    mode: "0755"
+    recurse: yes
+
+- name: "Deply tomcat-users.xml" 
+  template:
+    src: "tomcat-users.xml.j2"
+    dest: "{{ install_dir }}/conf/tomcat-users.xml"
+    owner: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+    mode: "0644"
+  notify: 
+      - reload systemd
+      - restart tomcat
+
+- name: "Deploy systemd service file"
+  template:
+    src: "tomcat.service.j2"
+    dest: "/etc/systemd/system/tomcat.service"
+    mode: "0644"
+  notify: 
+      - reload systemd
+      - restart tomcat 
+- name: "copying the contex.xml file"
+  copy:
+    src: "contex.xml"
+    dest: "/opt/tomcat/webapps/{{ item }}/META-INF/context.xml"
+  loop:
+    - manager
+    - host-manager
+  notify:  
+      - reload systemd
+      - restart tomcat
+
+# tasks file for tomcat
